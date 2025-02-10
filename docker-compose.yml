@@ -4,3 +4,11 @@ services:
     build: .
     ports:
       - "8080:8080"
+  mongo:
+    image: mongo
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: hetic
+      MONGO_INITDB_ROOT_PASSWORD: password
+    ports:
+      - "27017:27017"

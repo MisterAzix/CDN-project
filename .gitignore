@@ -1,2 +1,6 @@
-app/app/
+src/app/
 *.exe
+
+# IDE
+.vscode/
+.idea/
