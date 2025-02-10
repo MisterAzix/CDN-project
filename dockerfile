@@ -3,7 +3,7 @@ FROM golang:1.22.2
 WORKDIR /app
 
 COPY go.mod ./
-RUN go mod tidy
+COPY go.mod go.sum ./
 
 COPY app/ .
 
