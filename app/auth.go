@@ -3,10 +3,10 @@ package app
 import (
     "context"
     "encoding/json"
-    "net/http"
-    "time"
     "fmt"
     "log"
+    "net/http"
+    "time"
 
     "golang.org/x/crypto/bcrypt"
     "go.mongodb.org/mongo-driver/v2/bson"
@@ -15,7 +15,7 @@ import (
 )
 
 type User struct {
-    ID       string `bson:"_id,omitempty"`
+    ID       bson.ObjectID `bson:"_id,omitempty"`
     Email    string `bson:"email"`
     Password string `bson:"password"`
 }
@@ -28,7 +28,7 @@ func InitAuth() {
 
     // Create an index on the email field
     indexModel := mongo.IndexModel{
-        Keys: bson.M{"email": 1}, // index in ascending order
+        Keys:    bson.M{"email": 1}, // index in ascending order
         Options: options.Index().SetUnique(true),
     }
     _, err := userCollection.Indexes().CreateOne(context.TODO(), indexModel)
@@ -49,7 +49,13 @@ func checkPasswordHash(password, hash string) bool {
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
     var user User
+
     err := json.NewDecoder(r.Body).Decode(&user)
+    if err != nil {
+        http.Error(w, "Invalid request payload", http.StatusBadRequest)
+        return
+    }
+    user.ID = bson.NewObjectID() // Generate a new ObjectID
     if err != nil {
         http.Error(w, "Invalid request payload", http.StatusBadRequest)
         return
@@ -82,19 +88,22 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
     }
 
     var user User
-    err = userCollection.FindOne(context.TODO(), bson.M{"email": creds.Email}).Decode(&user)
-    if err != nil {
+    ctx := context.TODO()
+    err = userCollection.FindOne(ctx, bson.M{"email": creds.Email}).Decode(&user)
+    if err == mongo.ErrNoDocuments {
         fmt.Printf("User not found with email: %s\n", creds.Email) // Log the email
-		fmt.Printf("Error: %v\n", err) // Log the error
-        count, _ := userCollection.CountDocuments(context.TODO(), bson.M{})
-		fmt.Printf("Users count: %d\n", count)
-		http.Error(w, "User not found", http.StatusUnauthorized)
-		return
-			}
+        http.Error(w, "User not found", http.StatusUnauthorized)
+        return
+    }
+    if err != nil {
+        fmt.Printf("Error: %v\n", err) // Log the error
+        http.Error(w, "Internal server error", http.StatusInternalServerError)
+        return
+    }
 
     if !checkPasswordHash(creds.Password, user.Password) {
         http.Error(w, "Invalid password", http.StatusUnauthorized)
-        return
+		return
     }
 
     token := "dummy-token"

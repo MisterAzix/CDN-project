@@ -8,11 +8,13 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.76.1
 	github.com/gorilla/mux v1.8.1
 	github.com/joho/godotenv v1.5.1
-	go.mongodb.org/mongo-driver v1.17.2
 	go.mongodb.org/mongo-driver/v2 v2.0.0
 )
 
-require golang.org/x/sys v0.30.0 // indirect
+require (
+	go.mongodb.org/mongo-driver v1.17.2 // indirect
+	golang.org/x/sys v0.30.0 // indirect
+)
 
 require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.8 // indirect
