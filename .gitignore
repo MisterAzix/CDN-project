@@ -4,3 +4,6 @@ src/app/
 # IDE
 .vscode/
 .idea/
+
+.env
+

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"time"
-
+	"os"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
@@ -13,7 +13,12 @@ import (
 var client *mongo.Client
 
 func ConnectDB() {
-	clientOptions := options.Client().ApplyURI("mongodb://hetic:password@localhost:27017")
+	var db_name = os.Getenv("DB_NAME")
+	var db_host = os.Getenv("DB_HOST")
+	var db_password = os.Getenv("DB_PASSWORD")
+	uri := fmt.Sprintf("mongodb://%s:%s@%s", db_name, db_password, db_host)
+    log.Println("Connecting to MongoDB with URI:", uri)
+    clientOptions := options.Client().ApplyURI(uri)
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
