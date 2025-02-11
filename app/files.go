@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"time"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/bson"
+	"github.com/gorilla/mux"
 )
 
 const (
@@ -16,18 +18,18 @@ const (
 )
 
 type FileMetadata struct {
-	ID            primitive.ObjectID     `bson:"_id,omitempty"`       // ID du fichier
-	FileName      string                 `bson:"file_name"`           // Nom du fichier
-	FileSize      int64                  `bson:"file_size"`           // Taille du fichier
-	FileType      string                 `bson:"file_type"`           // Type du fichier
-	FilePath      string                 `bson:"file_path"`           // Chemin du fichier
-	UploadedAt    time.Time              `bson:"uploaded_at"`         // Date de téléchargement
-	UpdatedAt     time.Time              `bson:"updated_at"`          // Date de mise à jour
-	UploaderID    string                 `bson:"uploader_id"`         // ID de l'uploader
-	Metadata      map[string]interface{} `bson:"metadata"`            // Métadonnées
-	Status        string                 `bson:"status"`              // Statut du fichier
-	AccessControl AccessControl          `bson:"access_control"`      // Contrôle d'accès
-	ParentID      string                 `bson:"parent_id,omitempty"` // ID du dossier parent
+    ID            primitive.ObjectID     `bson:"_id,omitempty"`       // ID du fichier
+    FileName      string                 `bson:"file_name"`           // Nom du fichier
+    FileSize      int64                  `bson:"file_size"`           // Taille du fichier
+    FileType      string                 `bson:"file_type"`           // Type du fichier
+    FilePath      string                 `bson:"file_path"`           // Chemin du fichier
+    UploadedAt    time.Time              `bson:"uploaded_at"`         // Date de téléchargement
+    UpdatedAt     time.Time              `bson:"updated_at"`          // Date de mise à jour
+    UploaderID    primitive.ObjectID     `bson:"uploader_id"`         // ID de l'uploader
+    Metadata      map[string]interface{} `bson:"metadata"`            // Métadonnées
+    Status        string                 `bson:"status"`              // Statut du fichier
+    AccessControl AccessControl          `bson:"access_control"`      // Contrôle d'accès
+    ParentID      string                 `bson:"parent_id,omitempty"` // ID du dossier parent
 }
 
 type AccessControl struct {
@@ -94,7 +96,7 @@ func uploadFileHandler(w http.ResponseWriter, r *http.Request) {
 		FilePath:   filePath,
 		UploadedAt: time.Now(),
 		UpdatedAt:  time.Now(),
-		UploaderID: "user_identifier", // Remplacez par l'ID réel de l'uploader
+        UploaderID: primitive.NewObjectID(), // Remplacez par l'ID réel de l'uploader
 		Metadata: map[string]interface{}{
 			"width":    1920,
 			"height":   1080,
@@ -118,3 +120,74 @@ func uploadFileHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "File uploaded successfully: %s\n", handler.Filename)
 }
 
+func deleteFileHandler(w http.ResponseWriter, r *http.Request) {
+    log.Println("Starting file deletion process")
+    fileID := mux.Vars(r)["id"]
+    log.Println("File ID:", fileID)
+
+    db := client.Database("file_manager")
+    collection := db.Collection("files")
+
+    var fileMetadata FileMetadata
+    objID, err := primitive.ObjectIDFromHex(fileID)
+    if err != nil {
+        log.Println("Invalid file ID:", err)
+        http.Error(w, "Invalid file ID", http.StatusBadRequest)
+        return
+    }
+    log.Println("Object ID:", objID)
+
+    err = collection.FindOneAndDelete(context.TODO(), bson.M{"_id": objID}).Decode(&fileMetadata)
+    if err != nil {
+        log.Println("Error deleting file metadata:", err)
+        http.Error(w, "Failed to delete file metadata", http.StatusInternalServerError)
+        return
+    }
+    log.Println("File metadata deleted successfully")
+
+    err = os.Remove(fileMetadata.FilePath)
+    if err != nil {
+        log.Println("Error deleting file:", err)
+        http.Error(w, "Failed to delete file", http.StatusInternalServerError)
+        return
+    }
+    log.Println("File deleted successfully")
+
+    w.Write([]byte("File deleted successfully"))
+}
+
+func listFilesHandler(w http.ResponseWriter, r *http.Request) {
+    log.Println("Starting file listing process")
+    parentID := r.URL.Query().Get("parent_id")
+    log.Println("Parent ID:", parentID)
+
+    db := client.Database("file_manager")
+    collection := db.Collection("files")
+
+    filter := bson.M{}
+    if parentID != "" {
+        filter["parent_id"] = parentID
+    }
+    log.Println("Filter:", filter)
+
+    cursor, err := collection.Find(context.TODO(), filter)
+    if err != nil {
+        log.Println("Error listing files:", err)
+        http.Error(w, "Failed to list files", http.StatusInternalServerError)
+        return
+    }
+    defer cursor.Close(context.TODO())
+    log.Println("Files listed successfully")
+
+    var files []FileMetadata
+    if err = cursor.All(context.TODO(), &files); err != nil {
+        log.Println("Error decoding files:", err)
+        http.Error(w, "Failed to decode files", http.StatusInternalServerError)
+        return
+    }
+
+    for _, file := range files {
+        log.Printf("File: ID=%s, Name=%s, Path=%s, ParentID=%s\n", file.ID.Hex(), file.FileName, file.FilePath, file.ParentID)
+        fmt.Fprintf(w, "ID: %s, Name: %s, Path: %s, ParentID: %s\n", file.ID.Hex(), file.FileName, file.FilePath, file.ParentID)
+    }
+}

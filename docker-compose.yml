@@ -5,8 +5,10 @@ services:
     build: .
     ports:
       - "8080:8080"
+    env_file:
+      - .env
     environment:
-      - DB_USERNAME=${DB_NAME}
+      - DB_NAME=${DB_NAME}
       - DB_HOST=${DB_HOST}
       - DB_PASSWORD=${DB_PASSWORD}
 
@@ -14,7 +16,7 @@ services:
     image: mongo
     restart: always
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${DB_USERNAME}
+      MONGO_INITDB_ROOT_USERNAME: ${DB_NAME}
       MONGO_INITDB_ROOT_PASSWORD: ${DB_PASSWORD}
     ports:
       - "27017:27017"
@@ -25,7 +27,7 @@ services:
     ports:
       - 8081:8081
     environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: ${DB_USERNAME}
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${DB_NAME}
       ME_CONFIG_MONGODB_ADMINPASSWORD: ${DB_PASSWORD}
-      ME_CONFIG_MONGODB_URL: mongodb://${DB_USERNAME}:${DB_PASSWORD}@mongo:27017/
+      ME_CONFIG_MONGODB_URL: mongodb://${DB_NAME}:${DB_PASSWORD}@mongo:27017/
       ME_CONFIG_BASICAUTH: false
