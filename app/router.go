@@ -5,9 +5,18 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
 )
 
+var logger = GetLogger()
+
+
 func handler(w http.ResponseWriter, r *http.Request) {
+	logger.WithFields(logrus.Fields{
+        "method": r.Method,
+        "path":   r.URL.Path,
+		"level" : "info",
+    }).Info("200")
 	fmt.Fprintf(w, "Hello, Go!")
 }
 

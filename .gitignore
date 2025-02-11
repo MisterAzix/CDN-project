@@ -1,6 +1,7 @@
 src/app/
 *.exe
-datas/
+datas
+app.log
 
 # IDE
 .vscode/

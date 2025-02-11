@@ -29,5 +29,29 @@ services:
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: ${DB_NAME}
       ME_CONFIG_MONGODB_ADMINPASSWORD: ${DB_PASSWORD}
-      ME_CONFIG_MONGODB_URL: mongodb://${DB_NAME}:${DB_PASSWORD}@mongo:27017/
+      ME_CONFIG_MONGODB_URL: mongodb://${DB_USERNAME}:${DB_PASSWORD}@mongo:27017/
       ME_CONFIG_BASICAUTH: false
+
+  minio:
+    image: 'minio/minio:latest'
+    ports:
+      - '9000:9000'
+      - '8900:8900'
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: password
+    volumes:
+      - 'minio:/data/minio'
+    command: 'minio server /data/minio --console-address ":8900"'
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - '-f'
+        - 'http://localhost:9000/minio/health/live'
+      retries: 3
+      timeout: 5s
+
+volumes:
+  minio:
+    driver: local
