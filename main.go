@@ -1,23 +1,29 @@
 package main
 
 import (
-	"log"
-	"net/http"
-
-	"hetic-cdn-project/app"
+    "log"
+    "net/http"
+    "github.com/joho/godotenv"
+    "hetic-cdn-project/app"
 )
 
 const PORT = ":8080"
 const HOST = "http://localhost" + PORT
 
 func main() {
-	app.NewRouter()
-	app.ConnectDB()
+    // Charger les variables d'environnement à partir du fichier .env
+    err := godotenv.Load()
+    if err != nil {
+        log.Fatal("Error loading .env file")
+    }
 
-	log.Println("Server is running on", HOST)
-	err := http.ListenAndServe(PORT, app.NewRouter())
-	if err != nil {
-		log.Fatal("Error starting server!", err)
-		return
-	}
+    app.ConnectDB()
+    router := app.NewRouter()
+
+    log.Println("Server is running on", HOST)
+    err = http.ListenAndServe(PORT, router)
+    if err != nil {
+        log.Fatal("Error starting server!", err)
+        return
+    }
 }
