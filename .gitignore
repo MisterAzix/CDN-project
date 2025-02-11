@@ -1,5 +1,6 @@
 src/app/
 *.exe
+datas
 
 # IDE
 .vscode/
