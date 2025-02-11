@@ -1,0 +1,66 @@
+{
+    "info": {
+      "name": "CDN Project",
+      "_postman_id": "your-postman-id",
+      "description": "Collection for CDN Project API",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+      {
+        "name": "Register User",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+          },
+          "url": {
+            "raw": "http://localhost:8080/register",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "8080",
+            "path": [
+              "register"
+            ]
+          }
+        },
+        "response": []
+      },
+      {
+        "name": "Login User",
+        "request": {
+          "method": "POST",
+          "header": [
+            {
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+          },
+          "url": {
+            "raw": "http://localhost:8080/login",
+            "protocol": "http",
+            "host": [
+              "localhost"
+            ],
+            "port": "8080",
+            "path": [
+              "login"
+            ]
+          }
+        },
+        "response": []
+      }
+    ]
+  }

@@ -28,5 +28,7 @@ func NewRouter() *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc("/", handler)
 	r.HandleFunc("/health", healthHandler)
+	r.HandleFunc("/register", registerHandler).Methods("POST")
+    r.HandleFunc("/login", loginHandler).Methods("POST")
 	return r
 }

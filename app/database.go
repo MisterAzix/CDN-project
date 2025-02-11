@@ -33,5 +33,7 @@ func ConnectDB() {
 		log.Fatal("Error pinging MongoDB: ", err)
 	}
 
+    clientOptions.SetRegistry(bson.NewRegistry().RegisterDecoder(bson.TypeObjectID, bson.NewObjectIDDecoder()).Build())
+
 	fmt.Println("Connected to MongoDB!")
 }

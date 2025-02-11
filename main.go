@@ -13,6 +13,7 @@ func main() {
 	app.LoadEnv()
 	app.ConnectDB()
 	app.InitS3Client()
+	app.InitAuth()
 	router := app.NewRouter()
 
 	log.Println("Server is running on", HOST)
