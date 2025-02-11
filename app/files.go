@@ -8,8 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"time"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"github.com/gorilla/mux"
 )
 
@@ -18,14 +17,14 @@ const (
 )
 
 type FileMetadata struct {
-    ID            primitive.ObjectID     `bson:"_id,omitempty"`       // ID du fichier
+    ID            bson.ObjectID     `bson:"_id,omitempty"`       // ID du fichier
     FileName      string                 `bson:"file_name"`           // Nom du fichier
     FileSize      int64                  `bson:"file_size"`           // Taille du fichier
     FileType      string                 `bson:"file_type"`           // Type du fichier
     FilePath      string                 `bson:"file_path"`           // Chemin du fichier
     UploadedAt    time.Time              `bson:"uploaded_at"`         // Date de téléchargement
     UpdatedAt     time.Time              `bson:"updated_at"`          // Date de mise à jour
-    UploaderID    primitive.ObjectID     `bson:"uploader_id"`         // ID de l'uploader
+    UploaderID    bson.ObjectID     `bson:"uploader_id"`         // ID de l'uploader
     Metadata      map[string]interface{} `bson:"metadata"`            // Métadonnées
     Status        string                 `bson:"status"`              // Statut du fichier
     AccessControl AccessControl          `bson:"access_control"`      // Contrôle d'accès
@@ -96,7 +95,7 @@ func uploadFileHandler(w http.ResponseWriter, r *http.Request) {
 		FilePath:   filePath,
 		UploadedAt: time.Now(),
 		UpdatedAt:  time.Now(),
-        UploaderID: primitive.NewObjectID(), // Remplacez par l'ID réel de l'uploader
+        UploaderID: bson.NewObjectID(), // Remplacez par l'ID réel de l'uploader
 		Metadata: map[string]interface{}{
 			"width":    1920,
 			"height":   1080,
@@ -129,7 +128,7 @@ func deleteFileHandler(w http.ResponseWriter, r *http.Request) {
     collection := db.Collection("files")
 
     var fileMetadata FileMetadata
-    objID, err := primitive.ObjectIDFromHex(fileID)
+    objID, err := bson.ObjectIDFromHex(fileID)
     if err != nil {
         log.Println("Invalid file ID:", err)
         http.Error(w, "Invalid file ID", http.StatusBadRequest)
