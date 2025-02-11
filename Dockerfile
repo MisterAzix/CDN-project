@@ -2,10 +2,10 @@ FROM golang:1.22.2
 
 WORKDIR /app
 
-COPY go.mod ./
 COPY go.mod go.sum ./
+RUN go mod tidy
 
-COPY app/ .
+COPY . .
 
 RUN go build -o server
 
