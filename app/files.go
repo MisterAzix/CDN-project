@@ -469,29 +469,6 @@ func fetchSubfolders(parentID string) ([]FolderWithFiles, error) {
 	return subfoldersWithFiles, nil
 }
 
-func serveFileHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("Starting file serving process")
-	fileID := mux.Vars(r)["id"]
-
-	db := client.Database("file_manager")
-	collection := db.Collection("files")
-
-	objID, err := bson.ObjectIDFromHex(fileID)
-	if err != nil {
-		http.Error(w, "Invalid file ID", http.StatusBadRequest)
-		return
-	}
-
-	var fileMetadata FileMetadata
-	err = collection.FindOne(context.TODO(), bson.M{"_id": objID}).Decode(&fileMetadata)
-	if err != nil {
-		http.Error(w, "File not found", http.StatusNotFound)
-		return
-	}
-
-	filePath := fileMetadata.FilePath
-	http.ServeFile(w, r, filePath)
-}
 
 
 // ---------------------------------------------------------- //
@@ -499,50 +476,26 @@ func serveFileHandler(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------- //
 func deleteFolderHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Starting folder deletion process")
-	uploaderIDStr := r.FormValue("uploader_id")
-	folderIDStr := r.FormValue("id")
-
-	uploaderID, err := bson.ObjectIDFromHex(uploaderIDStr)
-	if err != nil {
-		http.Error(w, "Invalid uploader ID", http.StatusBadRequest)
-		return
-	}
-
-	folderID, err := bson.ObjectIDFromHex(folderIDStr)
+	folderID := mux.Vars(r)["id"]
 
 	db := client.Database("file_manager")
 	collection := db.Collection("folders")
 
+	objID, err := bson.ObjectIDFromHex(folderID)
 	if err != nil {
 		http.Error(w, "Invalid folder ID", http.StatusBadRequest)
 		return
 	}
 
-	// ------------- Suppression des fichiers serveur ------------ //
-
 	// First, delete all files within the folder
-	err = deleteFilesInFolder(folderIDStr)
+	err = deleteFilesInFolder(folderID)
 	if err != nil {
 		http.Error(w, "Failed to delete files in folder", http.StatusInternalServerError)
 		return
 	}
-	var dirPath string
-	dirPath, err = buildDirectoryPath(uploaderID, folderID)
-	if err != nil {
-		http.Error(w, "Failed to build directory path", http.StatusInternalServerError)
-		return
-	}
-	if err := os.RemoveAll(dirPath); err != nil {
-		http.Error(w, "Failed to delete folder directory", http.StatusInternalServerError)
-		return
-	}
 
-	w.Write([]byte("Folder and its files deleted successfully"))
-
-	// ------------- Suppression dans la base ------------------- //
-
-	// Then, delete the folder itself from the database
-	_, err = collection.DeleteOne(context.TODO(), bson.M{"_id": folderID})
+	// Then, delete the folder itself
+	_, err = collection.DeleteOne(context.TODO(), bson.M{"_id": objID})
 	if err != nil {
 		http.Error(w, "Failed to delete folder", http.StatusInternalServerError)
 		return

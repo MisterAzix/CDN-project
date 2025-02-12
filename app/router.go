@@ -31,9 +31,7 @@ func NewRouter() *mux.Router {
     r.HandleFunc("/file/upload", uploadFileHandler).Methods("POST")
 	r.HandleFunc("/folder/upload", createFolderHandler).Methods("POST")
 	r.HandleFunc("/file/delete/{id}", deleteFileHandler).Methods("DELETE")
-	r.HandleFunc("/folder/delete", deleteFolderHandler).Methods("DELETE")
+	r.HandleFunc("/folder/delete/{id}", deleteFolderHandler).Methods("DELETE")
     r.HandleFunc("/fetch-folders", fetchFoldersHandler).Methods("GET")
-	r.HandleFunc("/serve-file/{id}", serveFileHandler).Methods("GET") 
-
 	return r
 }
