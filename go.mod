@@ -1,6 +1,6 @@
 module hetic-cdn-project
 
-go 1.22.2
+go 1.22.3
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.36.1
@@ -12,8 +12,8 @@ require (
 )
 
 require (
-	github.com/rs/cors v1.11.1 // indirect
 	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/time v0.10.0 // indirect
 )
 
 require (

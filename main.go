@@ -4,8 +4,9 @@ import (
 	"hetic-cdn-project/app"
 	"log"
 	"net/http"
-	"github.com/rs/cors"
 	"os"
+
+	"github.com/rs/cors"
 )
 
 const PORT = ":8080"
@@ -19,11 +20,11 @@ func main() {
 	router := app.NewRouter()
 
 	corsHandler := cors.New(cors.Options{
-        AllowedOrigins:   []string{os.Getenv("FRONTEND_URL")},
-        AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
-        AllowedHeaders:   []string{"Content-Type", "Authorization"},
-        AllowCredentials: true,
-    }).Handler(router)
+		AllowedOrigins:   []string{os.Getenv("FRONTEND_URL")},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
+	}).Handler(router)
 
 	log.Println("Server is running on", HOST)
 	err := http.ListenAndServe(PORT, corsHandler)
