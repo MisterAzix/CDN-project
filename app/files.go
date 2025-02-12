@@ -118,47 +118,6 @@ func generateTag(fileExtension string) string {
 	}
 }
 
-// func getImageDimensions(filePath string) (int, int, error) {
-// 	file, err := os.Open(filePath)
-// 	m, _, err := image.Decode(reader)
-// 		if err != nil {
-// 			log.Fatal(err)
-// 		}
-// 		bounds := m.Bounds()
-// 		w := bounds.Dx()
-// 		h := bounds.Dy()
-// 	return img.w, img.h, nil
-// }
-
-// func getVideoDuration(filePath string) (time.Duration, error) {
-// 	cmd := exec.Command("ffmpeg", "-i", filePath)
-// 	output, err := cmd.CombinedOutput()
-// 	if err != nil {
-// 		return 0, err
-// 	}
-
-// 	durationStr := "0s"
-// 	for _, line := range strings.Split(string(output), "\n") {
-// 		if strings.Contains(line, "Duration:") {
-// 			parts := strings.Split(line, ",")
-// 			for _, part := range parts {
-// 				if strings.HasPrefix(part, "Duration:") {
-// 					durationStr = strings.TrimSpace(strings.Split(part, "Duration:")[1])
-// 					break
-// 				}
-// 			}
-// 			break
-// 		}
-// 	}
-
-// 	duration, err := time.ParseDuration(durationStr)
-// 	if err != nil {
-// 		return 0, err
-// 	}
-// 	return duration, nil
-// }
-
-
 // ---------------------------------------------------------- //
 // ------------- Upload Fichiers / Dossiers ----------------- //
 // ---------------------------------------------------------- //
@@ -251,16 +210,17 @@ func uploadFileHandler(w http.ResponseWriter, r *http.Request) {
 	parentIDString := r.FormValue("parent_id")
 	uploaderIDString := r.FormValue("uploader_id")
 
-	parentID, err := bson.ObjectIDFromHex(parentIDString)
-	if err != nil {
-		http.Error(w, "Invalid parent ID", http.StatusBadRequest)
-		return
-	}
+	
 
 	uploaderID, err := bson.ObjectIDFromHex(uploaderIDString)
 	if err != nil {
 		http.Error(w, "Invalid uploader ID", http.StatusBadRequest)
 		return
+	}
+
+	parentID, err := bson.ObjectIDFromHex(parentIDString)
+	if err != nil {
+		parentID = uploaderID
 	}
 
 	// Construct the directory path using uploader ID and parent ID
@@ -275,7 +235,12 @@ func uploadFileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath := filepath.Join(dirPath, handler.Filename)
+	// Generate a new ID for the file
+	fileID := bson.NewObjectID()
+	fileExtension := filepath.Ext(handler.Filename)
+	fileName := fileID.Hex() + fileExtension
+	filePath := filepath.Join(dirPath, fileName)
+
 	outFile, err := os.Create(filePath)
 	if err != nil {
 		http.Error(w, "Failed to create file", http.StatusInternalServerError)
@@ -299,19 +264,20 @@ func uploadFileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fileExtension := filepath.Ext(handler.Filename)
+	fileExtension = filepath.Ext(handler.Filename)
 	tag := generateTag(fileExtension)
 
 	db := client.Database("file_manager")
 	collection := db.Collection("files")
 	_, err = collection.InsertOne(context.TODO(), FileMetadata{
-		FileName:   handler.Filename,
-		FileSize:   fileInfo.Size(),
-		FileType:   handler.Header.Get("Content-Type"),
-		FilePath:   filePath,
-		UploadedAt: time.Now(),
-		UpdatedAt:  time.Now(),
-		UploaderID: uploaderID,
+		ID:          fileID,
+		FileName:    handler.Filename,
+		FileSize:    fileInfo.Size(),
+		FileType:    handler.Header.Get("Content-Type"),
+		FilePath:    filePath,
+		UploadedAt:  time.Now(),
+		UpdatedAt:   time.Now(),
+		UploaderID:  uploaderID,
 		Metadata: map[string]interface{}{
 			"width":    0,
 			"height":   0,
@@ -330,8 +296,9 @@ func uploadFileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprintf(w, "File uploaded successfully: %s\n", handler.Filename)
+	fmt.Fprintf(w, "File uploaded successfully: %s\n", fileName)
 }
+
 
 
 
@@ -386,12 +353,26 @@ func fetchFoldersHandler(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	log.Println("Successfully fetched folders")
-	w.Header().Set("Content-Type", "application/json")
-	jsonData, err := json.Marshal(foldersWithFiles)
+	// List root files
+	rootFiles, err := listRootFiles(uploaderID)
 	if err != nil {
-		log.Printf("Error marshalling folders: %v", err)
-		http.Error(w, "Failed to encode folders", http.StatusInternalServerError)
+		http.Error(w, "Failed to list root files", http.StatusInternalServerError)
+		return
+	}
+
+	log.Println("Successfully fetched folders and root files")
+	w.Header().Set("Content-Type", "application/json")
+	response := struct {
+		Folders []FolderWithFiles `json:"folders"`
+		Files   []FileMetadata    `json:"files"`
+	}{
+		Folders: foldersWithFiles,
+		Files:   rootFiles,
+	}
+	jsonData, err := json.Marshal(response)
+	if err != nil {
+		log.Printf("Error marshalling response: %v", err)
+		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
 		return
 	}
 	if _, err := w.Write(jsonData); err != nil {
@@ -401,6 +382,28 @@ func fetchFoldersHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 
+
+func listRootFiles(uploaderID bson.ObjectID) ([]FileMetadata, error) {
+	log.Printf("Listing root files for uploader: %s", uploaderID.Hex())
+	db := client.Database("file_manager")
+	collection := db.Collection("files")
+
+	filter := bson.M{"parent_id": uploaderID}
+
+	cursor, err := collection.Find(context.TODO(), filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cursor.Close(context.TODO())
+
+	var files []FileMetadata
+	if err = cursor.All(context.TODO(), &files); err != nil {
+		return nil, err
+	}
+
+	log.Printf("Found %d root files for uploader: %s", len(files), uploaderID.Hex())
+	return files, nil
+}
 
 
 
