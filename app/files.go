@@ -340,51 +340,71 @@ func uploadFileHandler(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------- //
 
 func fetchFoldersHandler(w http.ResponseWriter, r *http.Request) {
-    log.Println("Starting folder fetching process")
-    uploaderIDStr := r.URL.Query().Get("uploader_id")
-    uploaderID, err := bson.ObjectIDFromHex(uploaderIDStr)
-    if err != nil {
-        http.Error(w, "Invalid uploader ID", http.StatusBadRequest)
-        return
-    }
+	log.Println("Starting folder fetching process")
+	uploaderIDStr := r.URL.Query().Get("uploader_id")
+	uploaderID, err := bson.ObjectIDFromHex(uploaderIDStr)
+	if err != nil {
+		http.Error(w, "Invalid uploader ID", http.StatusBadRequest)
+		return
+	}
 
-    db := client.Database("file_manager")
-    collection := db.Collection("folders")
-    // Fetch folders where the parent ID is the uploader ID
-    filter := bson.M{"uploader_id": uploaderID}
-    cursor, err := collection.Find(context.TODO(), filter)
-    if err != nil {
-        http.Error(w, "Failed to fetch folders", http.StatusInternalServerError)
-        return
-    }
-    defer cursor.Close(context.TODO())
+	db := client.Database("file_manager")
+	collection := db.Collection("folders")
+	// Fetch folders where the parent ID is the uploader ID
+	filter := bson.M{"uploader_id": uploaderID, "parent_id": uploaderID}
+	cursor, err := collection.Find(context.TODO(), filter)
+	if err != nil {
+		http.Error(w, "Failed to fetch folders", http.StatusInternalServerError)
+		return
+	}
+	defer cursor.Close(context.TODO())
 
-    var folders []Folder
-    if err = cursor.All(context.TODO(), &folders); err != nil {
-        http.Error(w, "Failed to decode folders", http.StatusInternalServerError)
-        return
-    }
+	var folders []Folder
+	if err = cursor.All(context.TODO(), &folders); err != nil {
+		http.Error(w, "Failed to decode folders", http.StatusInternalServerError)
+		return
+	}
 
-    log.Println("Successfully fetched folders")
+	var foldersWithFiles []FolderWithFiles
+	for _, folder := range folders {
+		files, err := listFilesForFolder(folder.ID)
+		if err != nil {
+			http.Error(w, "Failed to list files", http.StatusInternalServerError)
+			return
+		}
+
+		subfolders, err := fetchSubfolders(folder.ID)
+		if err != nil {
+			http.Error(w, "Failed to fetch subfolders", http.StatusInternalServerError)
+			return
+		}
+
+		foldersWithFiles = append(foldersWithFiles, FolderWithFiles{
+			Folder:      folder,
+			Files:       files,
+			Subfolders:  subfolders,
+		})
+	}
+
+	log.Println("Successfully fetched folders")
 	w.Header().Set("Content-Type", "application/json")
-    // Marshal the folders to JSON
-    jsonData, err := json.Marshal(folders)
-    if err != nil {
-        log.Printf("Error marshalling folders: %v", err)
-        http.Error(w, "Failed to encode folders", http.StatusInternalServerError)
-        return
-    }
-    // Write the JSON data to the response
-    if _, err := w.Write(jsonData); err != nil {
-        log.Printf("Error writing JSON data: %v", err)
-        http.Error(w, "Failed to write JSON data", http.StatusInternalServerError)
-    }
+	jsonData, err := json.Marshal(foldersWithFiles)
+	if err != nil {
+		log.Printf("Error marshalling folders: %v", err)
+		http.Error(w, "Failed to encode folders", http.StatusInternalServerError)
+		return
+	}
+	if _, err := w.Write(jsonData); err != nil {
+		log.Printf("Error writing JSON data: %v", err)
+		http.Error(w, "Failed to write JSON data", http.StatusInternalServerError)
+	}
 }
 
 
 
 
-func listFilesForFolder(parentID string) ([]FileMetadata, error) {
+
+func listFilesForFolder(parentID bson.ObjectID) ([]FileMetadata, error) {
 	log.Printf("Listing files for folder: %s", parentID)
 	db := client.Database("file_manager")
 	collection := db.Collection("files")
@@ -406,7 +426,7 @@ func listFilesForFolder(parentID string) ([]FileMetadata, error) {
 	return files, nil
 }
 
-func fetchSubfolders(parentID string) ([]FolderWithFiles, error) {
+func fetchSubfolders(parentID bson.ObjectID) ([]FolderWithFiles, error) {
 	log.Printf("Fetching subfolders for folder: %s", parentID)
 	db := client.Database("file_manager")
 	collection := db.Collection("folders")
@@ -427,12 +447,12 @@ func fetchSubfolders(parentID string) ([]FolderWithFiles, error) {
 	var subfoldersWithFiles []FolderWithFiles
 
 	for _, subfolder := range subfolders {
-		files, err := listFilesForFolder(subfolder.ID.Hex())
+		files, err := listFilesForFolder(subfolder.ID)
 		if err != nil {
 			return nil, err
 		}
 
-		nestedSubfolders, err := fetchSubfolders(subfolder.ID.Hex())
+		nestedSubfolders, err := fetchSubfolders(subfolder.ID)
 		if err != nil {
 			return nil, err
 		}
