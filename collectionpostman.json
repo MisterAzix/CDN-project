@@ -1,93 +1,162 @@
 {
     "info": {
-      "name": "CDN Project API",
-      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+        "name": "CDN Project API",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "item": [
-      {
-        "name": "Upload File",
-        "request": {
-          "method": "POST",
-          "header": [],
-          "body": {
-            "mode": "formdata",
-            "formdata": [
-              {
-                "key": "file",
-                "type": "file",
-                "src": "/path/to/your/file.jpg"
-              },
-              {
-                "key": "parent_id",
-                "type": "text",
-                "value": "parent_folder_id"
-              }
-            ]
-          },
-          "url": {
-            "raw": "http://localhost:8080/upload",
-            "protocol": "http",
-            "host": [
-              "localhost"
-            ],
-            "port": "8080",
-            "path": [
-              "upload"
-            ]
-          }
+        {
+            "name": "Upload File",
+            "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                    "mode": "formdata",
+                    "formdata": [
+                        {
+                            "key": "file",
+                            "type": "file",
+                            "src": "/path/to/your/file.jpg"
+                        },
+                        {
+                            "key": "parent_id",
+                            "type": "text",
+                            "value": "parent_folder_id"
+                        }
+                    ]
+                },
+                "url": {
+                    "raw": "http://localhost:8080/file/upload",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "8080",
+                    "path": [
+                        "file",
+                        "upload"
+                    ]
+                }
+            },
+            "response": []
         },
-        "response": []
-      },
-      {
-        "name": "Delete File",
-        "request": {
-          "method": "DELETE",
-          "header": [],
-          "url": {
-            "raw": "http://localhost:8080/delete/{file_id}",
-            "protocol": "http",
-            "host": [
-              "localhost"
-            ],
-            "port": "8080",
-            "path": [
-              "delete",
-              "{file_id}"
-            ],
-            "variable": [
-              {
-                "key": "file_id",
-                "value": "60d5f9b8f8d2e5a5d4f8b8f8"
-              }
-            ]
-          }
+        {
+            "name": "Delete File",
+            "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                    "raw": "http://localhost:8080/file/delete/{file_id}",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "8080",
+                    "path": [
+                        "file",
+                        "delete",
+                        "{file_id}"
+                    ],
+                    "variable": [
+                        {
+                            "key": "file_id",
+                            "value": "60d5f9b8f8d2e5a5d4f8b8f8"
+                        }
+                    ]
+                }
+            },
+            "response": []
         },
-        "response": []
-      },
-      {
-        "name": "List Files",
-        "request": {
-          "method": "GET",
-          "header": [],
-          "url": {
-            "raw": "http://localhost:8080/list?parent_id=parent_folder_id",
-            "protocol": "http",
-            "host": [
-              "localhost"
-            ],
-            "port": "8080",
-            "path": [
-              "list"
-            ],
-            "query": [
-              {
-                "key": "parent_id",
-                "value": "parent_folder_id"
-              }
-            ]
-          }
+        {
+            "name": "List Files",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "http://localhost:8080/list?parent_id=parent_folder_id",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "8080",
+                    "path": [
+                        "list"
+                    ],
+                    "query": [
+                        {
+                            "key": "parent_id",
+                            "value": "parent_folder_id"
+                        }
+                    ]
+                }
+            },
+            "response": []
         },
-        "response": []
-      }
+        {
+            "name": "Create Folder",
+            "request": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                    "mode": "formdata",
+                    "formdata": [
+                        {
+                            "key": "name",
+                            "type": "text",
+                            "value": "new_folder_name"
+                        },
+                        {
+                            "key": "uploader_id",
+                            "type": "text",
+                            "value": "uploader_id"
+                        },
+                        {
+                            "key": "parent_id",
+                            "type": "text",
+                            "value": "parent_folder_id"
+                        }
+                    ]
+                },
+                "url": {
+                    "raw": "http://localhost:8080/folder/upload",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "8080",
+                    "path": [
+                        "folder",
+                        "upload"
+                    ]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "Delete Folder",
+            "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                    "raw": "http://localhost:8080/folder/delete/{folder_id}",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "8080",
+                    "path": [
+                        "folder",
+                        "delete",
+                        "{folder_id}"
+                    ],
+                    "variable": [
+                        {
+                            "key": "folder_id",
+                            "value": "60d5f9b8f8d2e5a5d4f8b8f8"
+                        }
+                    ]
+                }
+            },
+            "response": []
+        }
     ]
-  }
+}

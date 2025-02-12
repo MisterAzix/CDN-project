@@ -12,7 +12,10 @@ require (
 	golang.org/x/time v0.10.0
 )
 
-require golang.org/x/sys v0.30.0 // indirect
+require (
+	golang.org/x/image v0.24.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
+)
 
 require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.8 // indirect
