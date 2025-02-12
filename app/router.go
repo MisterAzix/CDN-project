@@ -28,5 +28,8 @@ func NewRouter() *mux.Router {
 	r := mux.NewRouter()
 	r.HandleFunc("/", handler)
 	r.HandleFunc("/health", healthHandler)
+    r.HandleFunc("/upload", uploadFileHandler).Methods("POST")
+	r.HandleFunc("/delete/{id}", deleteFileHandler).Methods("DELETE")
+    r.HandleFunc("/list", listFilesHandler).Methods("GET")
 	return r
 }
