@@ -49,13 +49,7 @@ func checkPasswordHash(password, hash string) bool {
 
 func registerHandler(w http.ResponseWriter, r *http.Request) {
     var user User
-
     err := json.NewDecoder(r.Body).Decode(&user)
-    if err != nil {
-        http.Error(w, "Invalid request payload", http.StatusBadRequest)
-        return
-    }
-    user.ID = bson.NewObjectID() // Generate a new ObjectID
     if err != nil {
         http.Error(w, "Invalid request payload", http.StatusBadRequest)
         return
@@ -88,8 +82,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
     }
 
     var user User
-    ctx := context.TODO()
-    err = userCollection.FindOne(ctx, bson.M{"email": creds.Email}).Decode(&user)
+    err = userCollection.FindOne(context.TODO(), bson.D{{Key: "email", Value: creds.Email}}).Decode(&user)
     if err == mongo.ErrNoDocuments {
         fmt.Printf("User not found with email: %s\n", creds.Email) // Log the email
         http.Error(w, "User not found", http.StatusUnauthorized)
