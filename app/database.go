@@ -13,7 +13,7 @@ import (
 var client *mongo.Client
 
 func ConnectDB() {
-	var db_username = os.Getenv("DB_NAME")
+	var db_username = os.Getenv("DB_USERNAME")
 	var db_host = os.Getenv("DB_HOST")
 	var db_password = os.Getenv("DB_PASSWORD")
 	uri := fmt.Sprintf("mongodb://%s:%s@%s", db_username, db_password, db_host)
