@@ -8,6 +8,7 @@ import (
     "net/http"
     "time"
 
+    "github.com/golang-jwt/jwt/v4"
     "golang.org/x/crypto/bcrypt"
     "go.mongodb.org/mongo-driver/v2/bson"
     "go.mongodb.org/mongo-driver/v2/mongo"
@@ -15,12 +16,19 @@ import (
 )
 
 type User struct {
-    ID       bson.ObjectID `bson:"_id,omitempty"`
-    Email    string `bson:"email"`
-    Password string `bson:"password"`
+    ID       bson.ObjectID `bson:"_id,omitempty" json:"id,omitempty"`
+    Email    string        `bson:"email" json:"email"`
+    Password string        `bson:"password" json:"password"`
 }
 
 var userCollection *mongo.Collection
+var jwtKey = []byte("your_secret_key") // Remplacez par une clé secrète sécurisée
+
+type Claims struct {
+    Email string `json:"email"`
+    ID    bson.ObjectID `json:"id"`
+    jwt.StandardClaims
+}
 
 func InitAuth() {
     ConnectDB()
@@ -55,6 +63,12 @@ func registerHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    // Validate input
+    if user.Email == "" || user.Password == "" {
+        http.Error(w, "Email and password are required", http.StatusBadRequest)
+        return
+    }
+
     user.Password, err = hashPassword(user.Password)
     if err != nil {
         http.Error(w, "Failed to hash password", http.StatusInternalServerError)
@@ -81,6 +95,12 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
         return
     }
 
+    // Validate input
+    if creds.Email == "" || creds.Password == "" {
+        http.Error(w, "Email and password are required", http.StatusBadRequest)
+        return
+    }
+
     var user User
     err = userCollection.FindOne(context.TODO(), bson.D{{Key: "email", Value: creds.Email}}).Decode(&user)
     if err == mongo.ErrNoDocuments {
@@ -96,16 +116,35 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
     if !checkPasswordHash(creds.Password, user.Password) {
         http.Error(w, "Invalid password", http.StatusUnauthorized)
-		return
+        return
     }
 
-    token := "dummy-token"
+    // Generate JWT token
+    expirationTime := time.Now().Add(24 * time.Hour)
+    claims := &Claims{
+        Email: user.Email,
+        ID:    user.ID,
+        StandardClaims: jwt.StandardClaims{
+            ExpiresAt: expirationTime.Unix(),
+        },
+    }
+
+    token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+    tokenString, err := token.SignedString(jwtKey)
+    if err != nil {
+        http.Error(w, "Failed to generate token", http.StatusInternalServerError)
+        return
+    }
 
     http.SetCookie(w, &http.Cookie{
         Name:    "token",
-        Value:   token,
-        Expires: time.Now().Add(24 * time.Hour),
+        Value:   tokenString,
+        Expires: expirationTime,
+        HttpOnly: true,
+        Secure:   true, // Use Secure cookies in production
+        SameSite: http.SameSiteLaxMode,
     })
 
     w.WriteHeader(http.StatusOK)
+    json.NewEncoder(w).Encode(map[string]string{"token": tokenString, "userID": user.ID.Hex()})
 }
