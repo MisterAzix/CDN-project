@@ -12,7 +12,7 @@ require (
 )
 
 require (
-	go.mongodb.org/mongo-driver v1.17.2 // indirect
+	github.com/rs/cors v1.11.1 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 )
 
