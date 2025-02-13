@@ -46,17 +46,17 @@ type FileMetadata struct {
 }
 
 type Folder struct {
-	ID        bson.ObjectID `bson:"_id,omitempty"`
-	Name      string        `bson:"name"`
+	ID         bson.ObjectID `bson:"_id,omitempty"`
+	Name       string        `bson:"name"`
 	UploaderID bson.ObjectID `bson:"uploader_id"`
 	ParentID   bson.ObjectID `bson:"parent_id,omitempty"`
-	CreatedAt time.Time     `bson:"created_at"`
-	UpdatedAt time.Time     `bson:"updated_at"`
+	CreatedAt  time.Time     `bson:"created_at"`
+	UpdatedAt  time.Time     `bson:"updated_at"`
 }
 
 type FolderWithFiles struct {
-	Folder  Folder        `bson:"folder"`
-	Files   []FileMetadata `bson:"files"`
+	Folder     Folder            `bson:"folder"`
+	Files      []FileMetadata    `bson:"files"`
 	Subfolders []FolderWithFiles `bson:"subfolders"`
 }
 
@@ -64,7 +64,6 @@ type AccessControl struct {
 	Public      bool     `bson:"public"`
 	Permissions []string `bson:"permissions"`
 }
-
 
 func buildDirectoryPath(uploaderID, parentID bson.ObjectID) (string, error) {
 	db := client.Database("file_manager")
@@ -91,6 +90,7 @@ func buildDirectoryPath(uploaderID, parentID bson.ObjectID) (string, error) {
 	dirPath := filepath.Join(UPLOAD_DIR, filepath.Join(pathParts...))
 	return dirPath, nil
 }
+
 // ----------------------------------------------------- //
 // ------------- Métadonnées Fichiers ----------------- //
 // ----------------------------------------------------- //
@@ -187,10 +187,6 @@ func createFolderHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Folder created successfully: %s\n", name)
 }
 
-
-
-
-
 func uploadFileHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println("Starting file upload process")
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
@@ -207,8 +203,6 @@ func uploadFileHandler(w http.ResponseWriter, r *http.Request) {
 
 	parentIDString := r.FormValue("parent_id")
 	uploaderIDString := r.FormValue("uploader_id")
-
-	
 
 	uploaderID, err := bson.ObjectIDFromHex(uploaderIDString)
 	if err != nil {
@@ -268,14 +262,14 @@ func uploadFileHandler(w http.ResponseWriter, r *http.Request) {
 	db := client.Database("file_manager")
 	collection := db.Collection("files")
 	_, err = collection.InsertOne(context.TODO(), FileMetadata{
-		ID:          fileID,
-		FileName:    handler.Filename,
-		FileSize:    fileInfo.Size(),
-		FileType:    handler.Header.Get("Content-Type"),
-		FilePath:    filePath,
-		UploadedAt:  time.Now(),
-		UpdatedAt:   time.Now(),
-		UploaderID:  uploaderID,
+		ID:         fileID,
+		FileName:   handler.Filename,
+		FileSize:   fileInfo.Size(),
+		FileType:   handler.Header.Get("Content-Type"),
+		FilePath:   filePath,
+		UploadedAt: time.Now(),
+		UpdatedAt:  time.Now(),
+		UploaderID: uploaderID,
 		Metadata: map[string]interface{}{
 			"width":    0,
 			"height":   0,

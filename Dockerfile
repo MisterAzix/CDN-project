@@ -7,8 +7,8 @@ RUN go mod tidy
 
 COPY . .
 
-RUN go build -o server
+RUN go build -o hetic-cdn-project
 
 EXPOSE 8080
 
-CMD ["/app/server"]
+CMD ["/app/hetic-cdn-project"]

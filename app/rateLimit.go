@@ -1,8 +1,8 @@
 package app
 
 import (
-	"net/http"
 	"golang.org/x/time/rate"
+	"net/http"
 )
 
 func NewRateLimiter(r rate.Limit, b int) *rate.Limiter {
