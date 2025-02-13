@@ -132,163 +132,177 @@ func createUserFolder(uploaderID bson.ObjectID) error {
 }
 
 func createFolderHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("Starting folder creation process")
-	name := r.FormValue("name")
-	uploaderIDStr := r.FormValue("uploader_id")
-	parentIDStr := r.FormValue("parent_id")
+    log.Println("Starting folder creation process")
+    name := r.FormValue("name")
+    uploaderIDStr := r.FormValue("uploader_id")
+    parentIDStr := r.FormValue("parent_id")
 
-	uploaderID, err := bson.ObjectIDFromHex(uploaderIDStr)
-	if err != nil {
-		http.Error(w, "Invalid uploader ID", http.StatusBadRequest)
-		return
-	}
+    uploaderID, err := bson.ObjectIDFromHex(uploaderIDStr)
+    if err != nil {
+        http.Error(w, "Invalid uploader ID", http.StatusBadRequest)
+        return
+    }
 
-	var parentID bson.ObjectID
-	if parentIDStr == "" {
-		parentID = uploaderID
-	} else {
-		parentID, err = bson.ObjectIDFromHex(parentIDStr)
-		if err != nil {
-			http.Error(w, "Invalid parent ID", http.StatusBadRequest)
-			return
-		}
-	}
+    var parentID bson.ObjectID
+    if parentIDStr == "" {
+        parentID = uploaderID
+    } else {
+        parentID, err = bson.ObjectIDFromHex(parentIDStr)
+        if err != nil {
+            http.Error(w, "Invalid parent ID", http.StatusBadRequest)
+            return
+        }
+    }
 
-	db := client.Database("file_manager")
-	collection := db.Collection("folders")
+    db := client.Database("file_manager")
+    collection := db.Collection("folders")
 
-	folder := Folder{
-		ID:         bson.NewObjectID(),
-		Name:       name,
-		UploaderID: uploaderID,
-		ParentID:   parentID,
-		CreatedAt:  time.Now(),
-		UpdatedAt:  time.Now(),
-	}
+    folder := Folder{
+        ID:         bson.NewObjectID(),
+        Name:       name,
+        UploaderID: uploaderID,
+        ParentID:   parentID,
+        CreatedAt:  time.Now(),
+        UpdatedAt:  time.Now(),
+    }
 
-	_, err = collection.InsertOne(context.TODO(), folder)
-	if err != nil {
-		http.Error(w, "Failed to create folder in database", http.StatusInternalServerError)
-		return
-	}
+    _, err = collection.InsertOne(context.TODO(), folder)
+    if err != nil {
+        http.Error(w, "Failed to create folder in database", http.StatusInternalServerError)
+        return
+    }
 
-	// Build the full directory path considering the hierarchy of parent folders
-	directoryPath, err := buildDirectoryPath(uploaderID, folder.ID)
-	if err != nil {
-		http.Error(w, "Failed to build directory path", http.StatusInternalServerError)
-		return
-	}
+    // Build the full directory path considering the hierarchy of parent folders
+    directoryPath, err := buildDirectoryPath(uploaderID, folder.ID)
+    if err != nil {
+        http.Error(w, "Failed to build directory path", http.StatusInternalServerError)
+        return
+    }
 
-	if err := os.MkdirAll(directoryPath, os.ModePerm); err != nil {
-		http.Error(w, "Failed to create directory", http.StatusInternalServerError)
-		return
-	}
+    if err := os.MkdirAll(directoryPath, os.ModePerm); err != nil {
+        http.Error(w, "Failed to create directory", http.StatusInternalServerError)
+        return
+    }
 
-	fmt.Fprintf(w, "Folder created successfully: %s\n", name)
+    // Cache the updated folder structure
+    cacheKey := "folders_" + uploaderID.Hex()
+    err = CacheData(cacheKey, folder)
+    if err != nil {
+        log.Printf("Error caching folder data: %v", err)
+    }
+
+    fmt.Fprintf(w, "Folder created successfully: %s\n", name)
 }
 
 func uploadFileHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("Starting file upload process")
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
-		http.Error(w, "File too big", http.StatusBadRequest)
-		return
-	}
+    log.Println("Starting file upload process")
+    if err := r.ParseMultipartForm(10 << 20); err != nil {
+        http.Error(w, "File too big", http.StatusBadRequest)
+        return
+    }
 
-	file, handler, err := r.FormFile("file")
-	if err != nil {
-		http.Error(w, "Failed to get file", http.StatusInternalServerError)
-		return
-	}
-	defer file.Close()
+    file, handler, err := r.FormFile("file")
+    if err != nil {
+        http.Error(w, "Failed to get file", http.StatusInternalServerError)
+        return
+    }
+    defer file.Close()
 
-	parentIDString := r.FormValue("parent_id")
-	uploaderIDString := r.FormValue("uploader_id")
+    parentIDString := r.FormValue("parent_id")
+    uploaderIDString := r.FormValue("uploader_id")
 
-	uploaderID, err := bson.ObjectIDFromHex(uploaderIDString)
-	if err != nil {
-		http.Error(w, "Invalid uploader ID", http.StatusBadRequest)
-		return
-	}
+    uploaderID, err := bson.ObjectIDFromHex(uploaderIDString)
+    if err != nil {
+        http.Error(w, "Invalid uploader ID", http.StatusBadRequest)
+        return
+    }
 
-	parentID, err := bson.ObjectIDFromHex(parentIDString)
-	if err != nil {
-		parentID = uploaderID
-	}
+    parentID, err := bson.ObjectIDFromHex(parentIDString)
+    if err != nil {
+        parentID = uploaderID
+    }
 
-	// Construct the directory path using uploader ID and parent ID
-	dirPath, err := buildDirectoryPath(uploaderID, parentID)
-	if err != nil {
-		http.Error(w, "Failed to build directory path", http.StatusInternalServerError)
-		return
-	}
+    // Construct the directory path using uploader ID and parent ID
+    dirPath, err := buildDirectoryPath(uploaderID, parentID)
+    if err != nil {
+        http.Error(w, "Failed to build directory path", http.StatusInternalServerError)
+        return
+    }
 
-	if err := os.MkdirAll(dirPath, os.ModePerm); err != nil {
-		http.Error(w, "Failed to create directory", http.StatusInternalServerError)
-		return
-	}
+    if err := os.MkdirAll(dirPath, os.ModePerm); err != nil {
+        http.Error(w, "Failed to create directory", http.StatusInternalServerError)
+        return
+    }
 
-	// Generate a new ID for the file
-	fileID := bson.NewObjectID()
-	fileExtension := filepath.Ext(handler.Filename)
-	fileName := fileID.Hex() + fileExtension
-	filePath := filepath.Join(dirPath, fileName)
+    // Generate a new ID for the file
+    fileID := bson.NewObjectID()
+    fileExtension := filepath.Ext(handler.Filename)
+    fileName := fileID.Hex() + fileExtension
+    filePath := filepath.Join(dirPath, fileName)
 
-	outFile, err := os.Create(filePath)
-	if err != nil {
-		http.Error(w, "Failed to create file", http.StatusInternalServerError)
-		return
-	}
-	defer outFile.Close()
+    outFile, err := os.Create(filePath)
+    if err != nil {
+        http.Error(w, "Failed to create file", http.StatusInternalServerError)
+        return
+    }
+    defer outFile.Close()
 
-	if _, err := io.Copy(outFile, file); err != nil {
-		http.Error(w, "Failed to save file", http.StatusInternalServerError)
-		return
-	}
+    if _, err := io.Copy(outFile, file); err != nil {
+        http.Error(w, "Failed to save file", http.StatusInternalServerError)
+        return
+    }
 
-	if err := outFile.Sync(); err != nil {
-		http.Error(w, "Failed to sync file", http.StatusInternalServerError)
-		return
-	}
+    if err := outFile.Sync(); err != nil {
+        http.Error(w, "Failed to sync file", http.StatusInternalServerError)
+        return
+    }
 
-	fileInfo, err := outFile.Stat()
-	if err != nil {
-		http.Error(w, "Failed to get file info", http.StatusInternalServerError)
-		return
-	}
+    fileInfo, err := outFile.Stat()
+    if err != nil {
+        http.Error(w, "Failed to get file info", http.StatusInternalServerError)
+        return
+    }
 
-	fileExtension = filepath.Ext(handler.Filename)
-	tag := generateTag(fileExtension)
+    fileExtension = filepath.Ext(handler.Filename)
+    tag := generateTag(fileExtension)
 
-	db := client.Database("file_manager")
-	collection := db.Collection("files")
-	_, err = collection.InsertOne(context.TODO(), FileMetadata{
-		ID:         fileID,
-		FileName:   handler.Filename,
-		FileSize:   fileInfo.Size(),
-		FileType:   handler.Header.Get("Content-Type"),
-		FilePath:   filePath,
-		UploadedAt: time.Now(),
-		UpdatedAt:  time.Now(),
-		UploaderID: uploaderID,
-		Metadata: map[string]interface{}{
-			"width":    0,
-			"height":   0,
-			"duration": 0,
-			"tags":     []string{tag},
-		},
-		Status: "active",
-		AccessControl: AccessControl{
-			Public:      true,
-			Permissions: []string{"read", "download"},
-		},
-		ParentID: parentID,
-	})
-	if err != nil {
-		http.Error(w, "Failed to save file metadata", http.StatusInternalServerError)
-		return
-	}
+    db := client.Database("file_manager")
+    collection := db.Collection("files")
+    _, err = collection.InsertOne(context.TODO(), FileMetadata{
+        ID:         fileID,
+        FileName:   handler.Filename,
+        FileSize:   fileInfo.Size(),
+        FileType:   handler.Header.Get("Content-Type"),
+        FilePath:   filePath,
+        UploadedAt: time.Now(),
+        UpdatedAt:  time.Now(),
+        UploaderID: uploaderID,
+        Metadata: map[string]interface{}{
+            "width":    0,
+            "height":   0,
+            "duration": 0,
+            "tags":     []string{tag},
+        },
+        Status: "active",
+        AccessControl: AccessControl{
+            Public:      true,
+            Permissions: []string{"read", "download"},
+        },
+        ParentID: parentID,
+    })
+    if err != nil {
+        http.Error(w, "Failed to save file metadata", http.StatusInternalServerError)
+        return
+    }
 
-	fmt.Fprintf(w, "File uploaded successfully: %s\n", fileName)
+    // Cache the updated file structure
+    cacheKey := "files_" + uploaderID.Hex()
+    err = CacheData(cacheKey, fileInfo)
+    if err != nil {
+        log.Printf("Error caching file data: %v", err)
+    }
+
+    fmt.Fprintf(w, "File uploaded successfully: %s\n", fileName)
 }
 
 
@@ -516,10 +530,24 @@ func serveFileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath, err := searchFileByIDAndVerifyUploaderID(id, uploaderID)
+	cacheKey := "file_" + id + "_" + uploaderID
+	var filePath string
+
+	// Try to get data from cache
+	err := GetCachedData(cacheKey, &filePath)
 	if err != nil || filePath == "" {
-		http.Error(w, "File not found", http.StatusNotFound)
-		return
+		// Cache miss, search for the file
+		filePath, err = searchFileByIDAndVerifyUploaderID(id, uploaderID)
+		if err != nil || filePath == "" {
+			http.Error(w, "File not found", http.StatusNotFound)
+			return
+		}
+
+		// Cache the file path
+		err = CacheData(cacheKey, filePath)
+		if err != nil {
+			log.Printf("Error caching file path: %v", err)
+		}
 	}
 
 	http.ServeFile(w, r, filePath)
@@ -580,6 +608,10 @@ func deleteFolderHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Cache the updated folder structure
+	cacheKey := "folders_" + uploaderID.Hex()
+	err = DeleteCachedData(cacheKey)
+
 	w.Write([]byte("Folder and its files deleted successfully"))
 }
 
@@ -602,6 +634,9 @@ func deleteFilesInFolder(folderID string) error {
 
 	for _, file := range files {
 		err = deleteFile(file.ID.Hex())
+		// Cache the updated file structure
+		cacheKey := "files_" + file.UploaderID.Hex()
+		err = DeleteCachedData(cacheKey)
 		if err != nil {
 			return err
 		}
@@ -640,5 +675,10 @@ func deleteFileHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to delete file", http.StatusInternalServerError)
 		return
 	}
+
+	// Cache the updated file structure
+	cacheKey := "files_" + r.FormValue("uploader_id")
+	err = DeleteCachedData(cacheKey)
+
 	w.Write([]byte("File deleted successfully"))
 }
