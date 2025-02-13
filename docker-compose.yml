@@ -11,8 +11,10 @@ services:
       - DB_USERNAME=${DB_NAME}
       - DB_HOST=${DB_HOST}
       - DB_PASSWORD=${DB_PASSWORD}
+
       - REDIS_ADDR=${REDIS_ADDR}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
+
 
   mongo:
     image: mongo
@@ -35,15 +37,17 @@ services:
       ME_CONFIG_BASICAUTH: false
 
   minio:
-    image: "minio/minio:latest"
+    image: 'minio/minio:latest'
     ports:
-      - "9000:9000"
-      - "8900:8900"
+      - '9000:9000'
+      - '8900:8900'
+
     environment:
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: password
     volumes:
-      - "minio:/data/minio"
+      - 'minio:/data/minio'
+
     command: 'minio server /data/minio --console-address ":8900"'
     healthcheck:
       test:
@@ -57,7 +61,7 @@ services:
     image: redis:latest
     ports:
       - "6379:6379"
-
+      
 volumes:
   minio:
     driver: local

@@ -423,6 +423,7 @@ func listRootFiles(uploaderID bson.ObjectID) ([]FileMetadata, error) {
 	cursor, err := collection.Find(context.TODO(), filter)
 	if err != nil {
 		return nil, err
+
 	}
 	defer cursor.Close(context.TODO())
 
@@ -446,6 +447,7 @@ func listFilesForFolder(parentID bson.ObjectID) ([]FileMetadata, error) {
 
 	cursor, err := collection.Find(context.TODO(), filter)
 	if err != nil {
+
 		return nil, err
 	}
 	defer cursor.Close(context.TODO())
@@ -604,6 +606,7 @@ func deleteFolderHandler(w http.ResponseWriter, r *http.Request) {
 	// Then, delete the folder itself from the database
 	_, err = collection.DeleteOne(context.TODO(), bson.M{"_id": folderID})
 	if err != nil {
+
 		http.Error(w, "Failed to delete folder", http.StatusInternalServerError)
 		return
 	}
@@ -668,6 +671,7 @@ func deleteFile(fileID string) error {
 	return nil
 }
 
+
 func deleteFileHandler(w http.ResponseWriter, r *http.Request) {
 	fileID := r.FormValue("id")
 	err := deleteFile(fileID)
@@ -676,9 +680,12 @@ func deleteFileHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+
 	// Cache the updated file structure
 	cacheKey := "files_" + r.FormValue("uploader_id")
 	err = DeleteCachedData(cacheKey)
 
 	w.Write([]byte("File deleted successfully"))
 }
+
+
