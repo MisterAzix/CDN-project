@@ -2,8 +2,8 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-    "encoding/json"
 
 	// "image"
 	"log"
@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
-	
 	// _ "golang.org/x/image/bmp"
 	// _ "golang.org/x/image/tiff"
 	// _ "golang.org/x/image/webp"
@@ -306,78 +305,102 @@ func uploadFileHandler(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------- //
 
 func fetchFoldersHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("Starting folder fetching process")
-	uploaderIDStr := r.URL.Query().Get("uploader_id")
-	uploaderID, err := bson.ObjectIDFromHex(uploaderIDStr)
-	if err != nil {
-		http.Error(w, "Invalid uploader ID", http.StatusBadRequest)
-		return
-	}
+    log.Println("Starting folder fetching process")
+    uploaderIDStr := r.URL.Query().Get("uploader_id")
+    uploaderID, err := bson.ObjectIDFromHex(uploaderIDStr)
+    if err != nil {
+        http.Error(w, "Invalid uploader ID", http.StatusBadRequest)
+        return
+    }
 
-	db := client.Database("file_manager")
-	collection := db.Collection("folders")
-	// Fetch folders where the parent ID is the uploader ID
-	filter := bson.M{"uploader_id": uploaderID, "parent_id": uploaderID}
-	cursor, err := collection.Find(context.TODO(), filter)
-	if err != nil {
-		http.Error(w, "Failed to fetch folders", http.StatusInternalServerError)
-		return
-	}
-	defer cursor.Close(context.TODO())
+    cacheKey := "folders_" + uploaderID.Hex()
 
-	var folders []Folder
-	if err = cursor.All(context.TODO(), &folders); err != nil {
-		http.Error(w, "Failed to decode folders", http.StatusInternalServerError)
-		return
-	}
+    // Try to get data from cache
+    var response struct {
+        Folders []FolderWithFiles `json:"folders"`
+        Files   []FileMetadata    `json:"files"`
+    }
+    err = GetCachedData(cacheKey, &response)
+    if err != nil {
+        http.Error(w, "Error fetching data from cache", http.StatusInternalServerError)
+        return
+    }
 
-	var foldersWithFiles []FolderWithFiles
-	for _, folder := range folders {
-		files, err := listFilesForFolder(folder.ID)
-		if err != nil {
-			http.Error(w, "Failed to list files", http.StatusInternalServerError)
-			return
-		}
+    if response.Folders == nil && response.Files == nil {
+        // Cache miss, fetch from database
+        db := client.Database("file_manager")
+        collection := db.Collection("folders")
+        // Fetch folders where the parent ID is the uploader ID
+        filter := bson.M{"uploader_id": uploaderID, "parent_id": uploaderID}
+        cursor, err := collection.Find(context.TODO(), filter)
+        if err != nil {
+            http.Error(w, "Failed to fetch folders", http.StatusInternalServerError)
+            return
+        }
+        defer cursor.Close(context.TODO())
 
-		subfolders, err := fetchSubfolders(folder.ID)
-		if err != nil {
-			http.Error(w, "Failed to fetch subfolders", http.StatusInternalServerError)
-			return
-		}
+        var folders []Folder
+        if err = cursor.All(context.TODO(), &folders); err != nil {
+            http.Error(w, "Failed to decode folders", http.StatusInternalServerError)
+            return
+        }
 
-		foldersWithFiles = append(foldersWithFiles, FolderWithFiles{
-			Folder:      folder,
-			Files:       files,
-			Subfolders:  subfolders,
-		})
-	}
+        var foldersWithFiles []FolderWithFiles
+        for _, folder := range folders {
+            files, err := listFilesForFolder(folder.ID)
+            if err != nil {
+                http.Error(w, "Failed to list files", http.StatusInternalServerError)
+                return
+            }
 
-	// List root files
-	rootFiles, err := listRootFiles(uploaderID)
-	if err != nil {
-		http.Error(w, "Failed to list root files", http.StatusInternalServerError)
-		return
-	}
+            subfolders, err := fetchSubfolders(folder.ID)
+            if err != nil {
+                http.Error(w, "Failed to fetch subfolders", http.StatusInternalServerError)
+                return
+            }
 
-	log.Println("Successfully fetched folders and root files")
-	w.Header().Set("Content-Type", "application/json")
-	response := struct {
-		Folders []FolderWithFiles `json:"folders"`
-		Files   []FileMetadata    `json:"files"`
-	}{
-		Folders: foldersWithFiles,
-		Files:   rootFiles,
-	}
-	jsonData, err := json.Marshal(response)
-	if err != nil {
-		log.Printf("Error marshalling response: %v", err)
-		http.Error(w, "Failed to encode response", http.StatusInternalServerError)
-		return
-	}
-	if _, err := w.Write(jsonData); err != nil {
-		log.Printf("Error writing JSON data: %v", err)
-		http.Error(w, "Failed to write JSON data", http.StatusInternalServerError)
-	}
+            foldersWithFiles = append(foldersWithFiles, FolderWithFiles{
+                Folder:      folder,
+                Files:       files,
+                Subfolders:  subfolders,
+            })
+        }
+
+        // List root files
+        rootFiles, err := listRootFiles(uploaderID)
+        if err != nil {
+            http.Error(w, "Failed to list root files", http.StatusInternalServerError)
+            return
+        }
+
+        response = struct {
+            Folders []FolderWithFiles `json:"folders"`
+            Files   []FileMetadata    `json:"files"`
+        }{
+            Folders: foldersWithFiles,
+            Files:   rootFiles,
+        }
+
+        // Cache the result
+        err = CacheData(cacheKey, response)
+        if err != nil {
+            http.Error(w, "Error caching data", http.StatusInternalServerError)
+            return
+        }
+    }
+
+    // Return the folders and files
+    w.Header().Set("Content-Type", "application/json")
+    jsonData, err := json.Marshal(response)
+    if err != nil {
+        log.Printf("Error marshalling response: %v", err)
+        http.Error(w, "Failed to encode response", http.StatusInternalServerError)
+        return
+    }
+    if _, err := w.Write(jsonData); err != nil {
+        log.Printf("Error writing JSON data: %v", err)
+        http.Error(w, "Failed to write JSON data", http.StatusInternalServerError)
+    }
 }
 
 
