@@ -28,6 +28,17 @@ func main() {
 
 	log.Println("Server is running on", HOST)
 	err := http.ListenAndServe(PORT, corsHandler)
+=======
+		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
+	})
+
+	handler := corsHandler.Handler(router)
+	
+	log.Println("Server is running on", HOST)
+	err := http.ListenAndServe(PORT, handler)
 	if err != nil {
 		log.Fatal("Error starting server!", err)
 		return
