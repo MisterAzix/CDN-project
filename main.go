@@ -16,7 +16,6 @@ func main() {
 	app.LoadEnv()
 	app.ConnectDB()
 	app.InitS3Client()
-	app.InitAuth()
 	router := app.NewRouter()
 
 	corsHandler := cors.New(cors.Options{
