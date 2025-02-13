@@ -21,6 +21,13 @@ spec:
                 name: secrets
           ports:
             - containerPort: 8080
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "500m"
+            limits:
+              memory: "512Mi"
+              cpu: "1"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -44,3 +51,10 @@ spec:
                 name: secrets
           ports:
             - containerPort: 27017
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1"
