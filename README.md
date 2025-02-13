@@ -21,6 +21,36 @@ go run main.go
 ```
 App is now running on [`http://localhost:8080/`](http://localhost:8080/)
 
+## Running with Kurbenetes
+1. Launch minikube
+```bash
+minikube start --driver=docker
+minikube addons enable ingress
+```
+2. Create docker image
+```bash
+docker build -t go-backend .
+```
+3. Load the image into minikube
+```bash
+minikube image load go-backend
+```
+4. Create the secret
+```bash
+kubectl create secret generic secret --from-env-file=k8s/.env
+```
+5. Apply the deployment and service
+```bash
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+kubectl apply -f k8s/ingress.yaml
+```
+6. Launch the minikube tunnel
+```bash
+minikube tunnel
+```
+App is now running on [`http://127.0.0.1/`](http://127.0.0.1/)
+
 ## 👤️ Authors 👤
 
 - Maxence BREUILLES ([@MisterAzix](https://github.com/MisterAzix))<br />
