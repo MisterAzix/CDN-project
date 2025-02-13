@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	
 	// _ "golang.org/x/image/bmp"
@@ -471,27 +470,41 @@ func fetchSubfolders(parentID bson.ObjectID) ([]FolderWithFiles, error) {
 	return subfoldersWithFiles, nil
 }
 
+func searchFileByIDAndVerifyUploaderID(id, uploaderID string) (string, error) {
+	var foundPath string
+	err := filepath.Walk(UPLOAD_DIR, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && strings.HasPrefix(info.Name(), id) {
+			// Check if the uploaderID is in the path
+			if strings.Contains(filepath.Dir(path), uploaderID) {
+				foundPath = path
+				return fmt.Errorf("found")
+			}
+		}
+		return nil
+	})
+	if err != nil && err.Error() == "found" {
+		return foundPath, nil
+	}
+	return "", err
+}
+
 func serveFileHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("Starting file serving process")
-	fileID := mux.Vars(r)["id"]
-
-	db := client.Database("file_manager")
-	collection := db.Collection("files")
-
-	objID, err := bson.ObjectIDFromHex(fileID)
-	if err != nil {
-		http.Error(w, "Invalid file ID", http.StatusBadRequest)
+	id := r.FormValue("id")
+	uploaderID := r.FormValue("uploader_id")
+	if id == "" {
+		http.Error(w, "ID parameter is missing", http.StatusBadRequest)
 		return
 	}
 
-	var fileMetadata FileMetadata
-	err = collection.FindOne(context.TODO(), bson.M{"_id": objID}).Decode(&fileMetadata)
-	if err != nil {
+	filePath, err := searchFileByIDAndVerifyUploaderID(id, uploaderID)
+	if err != nil || filePath == "" {
 		http.Error(w, "File not found", http.StatusNotFound)
 		return
 	}
 
-	filePath := fileMetadata.FilePath
 	http.ServeFile(w, r, filePath)
 }
 
@@ -604,7 +617,7 @@ func deleteFile(fileID string) error {
 }
 
 func deleteFileHandler(w http.ResponseWriter, r *http.Request) {
-	fileID := mux.Vars(r)["id"]
+	fileID := r.FormValue("id")
 	err := deleteFile(fileID)
 	if err != nil {
 		http.Error(w, "Failed to delete file", http.StatusInternalServerError)
