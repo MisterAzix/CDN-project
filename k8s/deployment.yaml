@@ -14,8 +14,7 @@ spec:
     spec:
       containers:
         - name: go-backend
-          image: go-backend:latest
-          imagePullPolicy: Never
+          image: misterazix/hetic-cdn-project:latest
           envFrom:
             - secretRef:
                 name: secrets
