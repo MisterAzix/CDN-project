@@ -17,6 +17,7 @@ func main() {
 	app.ConnectDB()
 	app.InitS3Client()
 	app.InitAuth()
+	app.InitRedisClient()
 	router := app.NewRouter()
 
 	corsHandler := cors.New(cors.Options{
