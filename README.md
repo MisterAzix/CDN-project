@@ -114,8 +114,7 @@ Vous trouverez des requêtes de test dans la collection postman du repo.
 
 ## Vidéo de démonstration
 
-[![Vidéo de démonstration](https://img.youtube.com/vi/VIDEO_ID/0.jpg)](https://www.youtube.com/watch?v=VIDEO_ID)
-
+[Vidéo de démonstration](https://youtu.be/F_M_L0AyD_I)
 
 ## 👤️ Auteurs 👤
 
