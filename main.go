@@ -18,6 +18,7 @@ func main() {
 	app.ConnectDB()
 	app.InitS3Client()
 	app.InitAuth()
+	app.InitRedisClient()
 	router := app.NewRouter()
 
 	// Metrics endpoint for Prometheus

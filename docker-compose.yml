@@ -14,6 +14,10 @@ services:
       - DB_HOST=${DB_HOST}
       - DB_PASSWORD=${DB_PASSWORD}
 
+      - REDIS_ADDR=${REDIS_ADDR}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+
+
   mongo:
     image: mongo
     restart: always
@@ -39,20 +43,28 @@ services:
     ports:
       - '9000:9000'
       - '8900:8900'
+
     environment:
       MINIO_ROOT_USER: minio
       MINIO_ROOT_PASSWORD: password
     volumes:
       - 'minio:/data/minio'
+
     command: 'minio server /data/minio --console-address ":8900"'
     healthcheck:
       test:
         - CMD
         - curl
-        - '-f'
-        - 'http://localhost:9000/minio/health/live'
+        - "-f"
+        - "http://localhost:9000/minio/health/live"
       retries: 3
       timeout: 5s
+redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+      
+=======
 
   prometheus:
     image: prom/prometheus
