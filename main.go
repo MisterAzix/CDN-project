@@ -1,12 +1,13 @@
 package main
 
 import (
-	"hetic-cdn-project/app"
-	"log"
 	"net/http"
 	"os"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/cors"
+	"hetic-cdn-project/app"
+	"log"
 )
 
 const PORT = ":8080"
@@ -19,6 +20,9 @@ func main() {
 	app.InitAuth()
 	app.InitRedisClient()
 	router := app.NewRouter()
+
+	// Metrics endpoint for Prometheus
+	router.Handle("/metrics", promhttp.Handler())
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   []string{os.Getenv("FRONTEND_URL")},
