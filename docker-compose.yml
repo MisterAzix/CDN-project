@@ -59,6 +59,12 @@ services:
         - "http://localhost:9000/minio/health/live"
       retries: 3
       timeout: 5s
+redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+      
+=======
 
   prometheus:
     image: prom/prometheus
