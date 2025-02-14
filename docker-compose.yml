@@ -2,13 +2,15 @@ version: "3.9"
 
 services:
   app:
+    depends_on:
+      - mongo
     build: .
     ports:
       - "8080:8080"
     env_file:
       - .env
     environment:
-      - DB_USERNAME=${DB_NAME}
+      - DB_USERNAME=${DB_USERNAME}
       - DB_HOST=${DB_HOST}
       - DB_PASSWORD=${DB_PASSWORD}
 
@@ -57,11 +59,29 @@ services:
         - "http://localhost:9000/minio/health/live"
       retries: 3
       timeout: 5s
-  redis:
+redis:
     image: redis:latest
     ports:
       - "6379:6379"
       
+=======
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./provisioning:/etc/grafana/provisioning
+
 volumes:
   minio:
     driver: local
